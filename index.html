@@ -798,16 +798,18 @@ function GlobalStyle() {
         will-change: transform, width, height, opacity;
       }
       .lb-cursor-dot {
-        width: 6px; height: 6px; background: var(--oxblood);
+        width: 5px; height: 5px; background: var(--oxblood); opacity: .55;
         transition: opacity .2s ease, background .2s ease;
       }
       .lb-cursor-ring {
-        width: 34px; height: 34px; border: 1.5px solid var(--oxblood);
+        width: 26px; height: 26px; border: 1px solid var(--oxblood); opacity: .28;
         transition: width .22s cubic-bezier(.2,.8,.2,1), height .22s cubic-bezier(.2,.8,.2,1),
                     border-color .22s ease, background .22s ease, opacity .2s ease;
       }
+      /* Sutil casi todo el tiempo — solo se nota de verdad al pasar sobre algo clickeable */
       .lb-cursor-ring.lb-cursor-big {
-        width: 64px; height: 64px; background: rgba(130,80,31,.08); border-color: var(--gold);
+        width: 60px; height: 60px; background: rgba(130,80,31,.1); border-color: var(--gold);
+        opacity: .9; border-width: 1.5px;
       }
       .lb-cursor-hide { opacity: 0 !important; }
 
@@ -6244,7 +6246,8 @@ function CatalogoPublico() {
   }))), React.createElement("div", {
     className: "lb-landing-section lb-fade-in",
     style: {
-      paddingTop: 60,
+      paddingTop: 28,
+      paddingBottom: 20,
       borderTop: "none"
     }
   }, React.createElement("div", {
@@ -6630,10 +6633,14 @@ function GiroPublico({
   const [spinning, setSpinning] = useState(false);
   const [offset, setOffset] = useState(0);
   const [revealed, setRevealed] = useState(false);
+  // Distingue "acabo de girar en esta sesión" de "ya estaba usado de antes"
+  // — evita que el resultado se muestre duplicado (la ficha final + la
+  // que aparece al recargar un giro ya usado eran la misma cosa dos veces).
+  const [spunThisSession, setSpunThisSession] = useState(false);
   const [sinStock, setSinStock] = useState(false);
   const [confetti, setConfetti] = useState(false);
   const [curtainUp, setCurtainUp] = useState(false);
-  const CARD_W = 140;
+  const CARD_W = 160;
   useEffect(() => {
     const t = setTimeout(() => setCurtainUp(true), 250);
     return () => clearTimeout(t);
@@ -6694,11 +6701,13 @@ function GiroPublico({
     }
     return items[items.length - 1];
   };
-  const track = useMemo(() => {
-    if (!box) return [];
+  const [track, setTrack] = useState([]);
+  // Vista previa (sin girar aun) — cartas de muestra, no comprometen ningun resultado.
+  useEffect(() => {
+    if (!box) return;
     const seq = [];
-    for (let i = 0; i < 24; i++) seq.push(box.items[Math.floor(Math.random() * box.items.length)]);
-    return seq;
+    for (let i = 0; i < 12; i++) seq.push(box.items[Math.floor(Math.random() * box.items.length)]);
+    setTrack(seq);
   }, [box]);
   const generadosBox = box ? giros.filter(g => g.boxId === box.id).length : 0;
   const usadosBox = box ? giros.filter(g => g.boxId === box.id && g.usado).length : 0;
@@ -6760,15 +6769,22 @@ function GiroPublico({
     setSpinning(true);
     playTicks();
     const ganador = weightedPick(itemsDisponibles);
-    const targetIndex = track.length;
+    // La tira que se ve termina exactamente en el premio real — nada de
+    // animar hacia una posición aleatoria desconectada del resultado.
+    const relleno = [];
+    for (let i = 0; i < 20; i++) relleno.push(itemsDisponibles[Math.floor(Math.random() * itemsDisponibles.length)]);
+    const nuevaTira = [...relleno, ganador];
+    setTrack(nuevaTira);
+    const targetIndex = nuevaTira.length - 1;
     setOffset(0);
     requestAnimationFrame(() => {
-      const center = 160;
-      setOffset(-(targetIndex * CARD_W) + center);
+      const center = 240;
+      setOffset(-(targetIndex * CARD_W) + center - CARD_W / 2);
     });
     setTimeout(async () => {
       setSpinning(false);
       setRevealed(true);
+      setSpunThisSession(true);
       const esUnica = rarityOf(ganador.peso) === "unica";
       if (esUnica) setConfetti(true);
       playWin(esUnica);
@@ -6870,17 +6886,17 @@ function GiroPublico({
     }
   }, React.createElement("span", {
     className: "lb-live-dot"
-  }), " ", usadosBox, " ", usadosBox === 1 ? "persona ya giró" : "personas ya giraron", " esta caja")), giro.usado && !spinning ? React.createElement(ResultCard, {
+  }), " ", usadosBox, " ", usadosBox === 1 ? "persona ya giró" : "personas ya giraron", " esta caja")), giro.usado && !spinning && !spunThisSession ? React.createElement(ResultCard, {
     prenda: ganadorItem,
     nombre: prendaNombre(giro.ganadorId),
     foto: prendaFoto(giro.ganadorId),
     marcaNombre: "Relive Vintage"
   }) : React.createElement(React.Fragment, null, React.createElement("div", {
     style: {
-      width: "min(320px, 92vw)",
+      width: "min(480px, 94vw)",
       overflow: "hidden",
       position: "relative",
-      height: 150,
+      height: 190,
       border: "2px solid var(--ink)",
       borderRadius: 6,
       background: "var(--paper)"
