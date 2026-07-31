@@ -616,7 +616,7 @@ function GlobalStyle() {
       }
 
       /* -------- Landing page del catálogo -------- */
-      .lb-landing-section { padding: 56px 0; }
+      .lb-landing-section { padding: 32px 0; }
       .lb-landing-section + .lb-landing-section { border-top: 1px solid var(--line); }
       .lb-landing-kicker {
         font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: .22em; text-transform: uppercase;
@@ -849,8 +849,8 @@ function GlobalStyle() {
       .lb-landing-section:first-of-type {
         position: relative;
         isolation: isolate;
-        padding-top: 64px !important;
-        padding-bottom: 64px;
+        padding-top: 24px !important;
+        padding-bottom: 8px !important;
       }
       .lb-landing-section:first-of-type::before {
         content: '';
@@ -889,6 +889,12 @@ function GlobalStyle() {
       @keyframes lbTitleSheen {
         0%, 100% { background-position: 0% 50%; }
         50% { background-position: 100% 50%; }
+      }
+      /* Fuera de la portada, los titulares son mucho más comedidos —
+         el tamaño gigante queda reservado solo para el primer golpe de vista. */
+      .lb-landing-section:not(:first-of-type) .lb-landing-title {
+        font-size: clamp(24px, 3.4vw, 34px) !important;
+        margin: 6px 0 8px !important;
       }
       .lb-landing-sub {
         opacity: 0; animation: lbFadeUp .8s ease .35s forwards;
@@ -6287,7 +6293,8 @@ function CatalogoPublico() {
   }, config.catTitulo || config.nombre), React.createElement("p", {
     className: "lb-landing-sub"
   }, config.catSubtitulo))), destacadosFinal.length > 0 && React.createElement("div", {
-    className: "lb-landing-section"
+    className: "lb-landing-section",
+    style: { paddingTop: 12 }
   }, React.createElement("span", {
     className: "lb-landing-kicker"
   }, "Selección"), React.createElement("h2", {
@@ -6640,7 +6647,17 @@ function GiroPublico({
   const [sinStock, setSinStock] = useState(false);
   const [confetti, setConfetti] = useState(false);
   const [curtainUp, setCurtainUp] = useState(false);
-  const CARD_W = 160;
+  // El ancho de cada carta se calcula según la pantalla real, para que
+  // siempre se vean ~3 cartas dentro de la ventanita (antes en celulares
+  // chicos apenas se veían 2, se sentía apretado y raro).
+  const [viewportW, setViewportW] = useState(typeof window !== "undefined" ? window.innerWidth : 480);
+  useEffect(() => {
+    const onResize = () => setViewportW(window.innerWidth);
+    window.addEventListener("resize", onResize, { passive: true });
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+  const REEL_W = Math.min(480, viewportW * 0.94);
+  const CARD_W = Math.round(REEL_W / 3);
   useEffect(() => {
     const t = setTimeout(() => setCurtainUp(true), 250);
     return () => clearTimeout(t);
@@ -6778,7 +6795,7 @@ function GiroPublico({
     const targetIndex = nuevaTira.length - 1;
     setOffset(0);
     requestAnimationFrame(() => {
-      const center = 240;
+      const center = REEL_W / 2;
       setOffset(-(targetIndex * CARD_W) + center - CARD_W / 2);
     });
     setTimeout(async () => {
@@ -6893,7 +6910,7 @@ function GiroPublico({
     marcaNombre: "Relive Vintage"
   }) : React.createElement(React.Fragment, null, React.createElement("div", {
     style: {
-      width: "min(480px, 94vw)",
+      width: REEL_W,
       overflow: "hidden",
       position: "relative",
       height: 190,
@@ -8004,6 +8021,18 @@ root.render(React.createElement(App, null));</script>
       });
     }, { threshold: 0.12, rootMargin: "0px 0px -8% 0px" }) : null;
 
+    // Respaldo de seguridad: si por lo que sea el IntersectionObserver
+    // nunca dispara para un elemento (carrera con React, navegador raro,
+    // lo que sea), este timeout se asegura de que el texto SIEMPRE termine
+    // apareciendo — nunca más un título o subtítulo invisible para siempre.
+    function asegurarVisible(el) {
+      setTimeout(function () {
+        if (el && !el.classList.contains("lb-reveal-in")) {
+          el.classList.add("lb-reveal-in");
+        }
+      }, 900);
+    }
+
     function tagForReveal(el, scaleVariant) {
       if (wasSeen(seenReveal, el)) return;
       markSeen(seenReveal, el);
@@ -8011,6 +8040,7 @@ root.render(React.createElement(App, null));</script>
       if (scaleVariant) el.classList.add("lb-reveal-scale");
       if (revealObserver) revealObserver.observe(el);
       else el.classList.add("lb-reveal-in");
+      asegurarVisible(el);
     }
 
     // ---- Titulares partidos en palabras (efecto editorial, con crecimiento) ----
@@ -8035,6 +8065,7 @@ root.render(React.createElement(App, null));</script>
       });
       if (revealObserver) revealObserver.observe(el);
       else el.classList.add("lb-reveal-in");
+      asegurarVisible(el);
     }
 
     // ---- Frases (subtítulos, kickers) partidas en palabras, más ligero y rápido ----
@@ -8058,6 +8089,7 @@ root.render(React.createElement(App, null));</script>
       });
       if (revealObserver) revealObserver.observe(el);
       else el.classList.add("lb-reveal-in");
+      asegurarVisible(el);
     }
 
     function enhanceNewNodes(root) {
