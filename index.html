@@ -623,7 +623,14 @@ function GlobalStyle() {
         color: var(--oxblood); text-align: center; display: block; margin-bottom: 10px;
       }
       .lb-landing-title { font-size: clamp(26px, 4vw, 38px); text-align: center; margin: 0 0 8px; }
-      .lb-landing-sub { text-align: center; color: var(--ink-soft); font-size: 14px; max-width: 480px; margin: 0 auto 40px; }
+      .lb-landing-sub { text-align: center; color: var(--ink-soft); font-size: 14px; max-width: 480px; margin: 0 auto 18px; }
+      /* Fuera de la portada, la frase de apoyo es chica y discreta —
+         la protagonista es la prenda, no el texto de arriba. */
+      .lb-landing-section:not(:first-of-type) .lb-landing-sub {
+        font-size: 12px !important;
+        max-width: 380px !important;
+        margin: 0 auto 14px !important;
+      }
       .lb-featured-card {
         position: relative; cursor: pointer; border-radius: 4px; overflow: hidden; background: var(--paper-dark);
         border: 1px solid var(--line); transition: transform .3s ease, box-shadow .3s ease;
@@ -6788,11 +6795,16 @@ function GiroPublico({
     const ganador = weightedPick(itemsDisponibles);
     // La tira que se ve termina exactamente en el premio real — nada de
     // animar hacia una posición aleatoria desconectada del resultado.
+    // Después del premio le siguen unas cartas más (decorativas, no
+    // significan nada) para que la ventana nunca se quede en blanco a
+    // la derecha una vez que la ruleta aterriza.
     const relleno = [];
     for (let i = 0; i < 20; i++) relleno.push(itemsDisponibles[Math.floor(Math.random() * itemsDisponibles.length)]);
-    const nuevaTira = [...relleno, ganador];
+    const colaDecorativa = [];
+    for (let i = 0; i < 6; i++) colaDecorativa.push(itemsDisponibles[Math.floor(Math.random() * itemsDisponibles.length)]);
+    const nuevaTira = [...relleno, ganador, ...colaDecorativa];
     setTrack(nuevaTira);
-    const targetIndex = nuevaTira.length - 1;
+    const targetIndex = relleno.length;
     setOffset(0);
     requestAnimationFrame(() => {
       const center = REEL_W / 2;
